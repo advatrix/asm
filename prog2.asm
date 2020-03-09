@@ -4,7 +4,7 @@
 	.stack 100h
 	.486
 	.data
-	a dw 1010000010111111b
+	a dw 5 ; res = 2
 	.code
 	mov ax, @data
 	mov ds, ax
@@ -17,7 +17,7 @@ lp: inc bx
 	cmp al, 0
 	je sb
 cnt:rol dx, 1
-	cmp bx, 16d
+	cmp bx, 15d
 	jng lp
 	jmp fn
 sb: btc dx, 0

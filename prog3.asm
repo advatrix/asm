@@ -5,13 +5,13 @@
 	.486
 	
 	.data
-n	db 4
-matrix db 1, 2, 3, 4
-	db 2, 2, 5, 1
-	db 3, 5, 3, 2
-	db 4, 1, 2, 4
-i 	db ?
-j 	db ?
+n	dw 4
+matrix db 1, 3, 7, 5
+	db 3, 2, 6, 7
+	db 7, 6, 2, 3
+	db 5, 7, 3, 1
+i 	dw ?
+j 	dw ?
 
 	.code
 	mov ax, @data
@@ -21,59 +21,71 @@ j 	db ?
 	jle er
 	cld
 	lea si, matrix
-	movzx cx, n
+	mov cx, n
 	mov i, 0
 loop1:
 	push si; stack: addr a[i][0]
-	lodsb ; ax = a[i][0], si = addr a[i][1]
-	mov bx, i
-	inc bx
-	mov i, bx
 	push cx; stack: (n-i), addr a[i][0]
 	mov j, 0
-loop2:
-	mov bx, j
-	inc bx
-	mov j, bx
+loop2:																					
+	lea si, matrix
+	mov ax, n
+	mov bx, i
+	mul bx
+	add ax, j
+	add si, ax
+	xor ax, ax
 	lodsb; ax = a[i][j], si = addr a[i][j+1]
 	push ax; stack: a[i][j], n-i, addr a[i][0]
 	mov ax, j
 	lea si, matrix
 	mov bx, n
 	mul bx; ax = j * n
-	mov bx, i
-	add ax, bx; ax = j * n + i
+	add ax, i; ax = j * n + i
 	add si, ax; si = addr a[j][i]
+	xor ax, ax
 	lodsb; ax = a[j][i]
 	pop bx; bx = a[i][j]; stack: n-i, addr a[i][0]
 	cmp ax, bx
 	jne false
+	
+	
 	push bx; stack: a[i][j], n-i, addr a[i][0]
 	mov ax, n
-	dec ax
+	dec ax; ax = n - 1
 	sub ax, j; ax = n -1-j
-	lea si, matrix
-	mov dx, n
-	mul dx; ax = n * (n-1-j)
-	add ax, dx
-	dec ax
+	lea si, matrix; si = addr a[0][0]
+	mov bx, n
+	mul bx; ax = n * (n-1-j)
+	add ax, bx; ax = n * (n - 1 - j) + n 
+	;dec ax
 	sub ax, i
+	dec ax
 	add si, ax; si = addr a[n-1-j][n-1-i]
+	xor ax, ax
 	lodsb
-	pop bx
-	cmp ax, bx
+	pop bx; 
+	cmp ax, bx; here ax != bx!!!!
 	jne false
+	mov bx, j
+	inc bx
+	mov j, bx
+	xor ax, ax
 	loop loop2
 	pop cx
 	pop si
 	add si, n
+	mov bx, i
+	inc bx
+	mov i, bx
 	loop loop1
 	xor ax, ax
 	inc ax
 	jmp ex
 false: xor ax, ax
 	jmp ex
-ex:	int 21h
+ex:	mov ax, 4c00h
+	int 21h
 er:	mov ax, 4c01h
-	jmp ex
+	int 21h
 	end

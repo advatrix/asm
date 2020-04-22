@@ -6,7 +6,7 @@
 	.486
 	.data
 string db '  ; a ,,	quick   brown,fox  jumps  ; over the; lazy dog', 0
-delim ds ' ,;', 0
+delim db ' ,;', 0
 newstring db 100 dup(?) ; for result
 	
 	.code
@@ -17,10 +17,10 @@ newstring db 100 dup(?) ; for result
 	lea si, string ; source
 	lea di, newstring ; destination
 	
-m1:	call space
+m1:	call space 
 	cmp byte ptr [si], 0
 	je fin
-	call _word
+	call _word; ax = addr of first space after the word
 	push ax
 	call reverse
 	inc sp
@@ -40,45 +40,34 @@ fin:
 
 ; code: 
 ; 
-reverse proc ; (si: ptr to the start, stack: ptr to the end, di: ptr to the destination)
+reverse proc c uses ax bx cx; (si: ptr to the start, stack: ptr to the end, di: ptr to the destination)
 	locals @@
+	
 	push bp
 	mov bp, sp
 	
-	push ax
-	push bx
-	push cx
-	
-	mov cx, [bp+4]
-	sub cx, si
+	mov cx, [bp+10]
+	sub cx, si; cx = len(word)
 	mov bx, cx
-	xor ax, ax
+	xor ax, ax; ax = 0
 	
 @@cycm1:	
-	lodsb
-	push ax
-	loop cycm1
-	
-	mov cx, bx
+	lodsb; al = word[cx], si += 1
+	push ax; stack: word[si], word[si-1], ... , bp
+	loop @@cycm1
+	mov cx, bx; cx = len(word)
 	
 @@cycm2:
-	pop ax
+	pop ax; ax = word[-cx]
 	stosb
-	loop cycm2
-
-	pop cx
-	pop bx
-	pop ax
+	loop @@cycm2
 	pop bp
 	ret
 	endp
 
 
-_word proc ; returns in ax ptr to the first delim after word
+_word proc c uses si cx di ; returns in ax ptr to the first delim after word
 	locals @@
-	push si
-	push cx
-	push di
 	
 	lea di, delim
 	push di
@@ -100,43 +89,34 @@ _word proc ; returns in ax ptr to the first delim after word
 	dec si
 	mov ax, si
 	add sp, 4
-	pop di
-	pop cx
-	pop si
 	ret
 	endp
 
 
-space proc
+space proc c uses ax cx di
 	locals @@
-	push ax
-	push cx
-	push di
 	
 	lea di, delim
-	push di
+	push di; stack: addr delim
 	
 	xor al, al
 	mov cx, 65535
 	repne scasb
 	neg cx
-	dec cx
-	push cx
+	dec cx; cx = len(delim)
+	push cx; stack: len(delim), addr delim
 	
-@@m1:	pop cx
-	pop di
-	push di
-	push cx
-	lodsb
+@@m1:	pop cx; cx = len(delim)
+	pop di; di = addr(delim), stack is empty
+	push di; stack: addr(delim)
+	push cx; stack: len(delim), addr(delim)
+	lodsb; al = string[si], si += 1
 	repne scasb
 	jcxz @@m2
 	jmp @@m1
 	
 @@m2:	dec si
 	add sp, 4 
-	pop di
-	pop cx
-	pop ax
 	ret
 	endp
 	

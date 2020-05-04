@@ -353,7 +353,7 @@ menu	proc
 	call output; выводим альтернативы меню
 	pop ax
 	jc @@ex; ошибка вывода. В противном случае делаем манипуляции со стеком
-	push ds ; сохраняем для дальнейшего восстановления ds, es, ss
+	push ds ; сохраняем для дальнейшего восстановления ds, es, ss. Надо сделать es и ds равными ss.
 	push es
 	push ss
 	push ss; два раза, 
@@ -362,27 +362,27 @@ menu	proc
 	mov ax,bp
 	sub ax,80
 	push ax
-	call inputline
+	call inputline; использует регистр стека как буфер
 	pop ax
-	pop es
+	pop es; восстанавливаем как было
 	pop ds
 	jc @@ex
-	mov al,@@buffer
-	cbw
-	sub ax,'0'
-	cmp ax,0
+	mov al,@@buffer; надо преобразовать код введенного символа в номер пункта меню 
+	cbw; анализируем первый введённый символ
+	sub ax,'0'; вычитаем код нуля
+	cmp ax,0; если число меньше нуля -- ввели не цифру
 	jl @@m
-	cmp ax,@@ax
-	jg @@m
+	cmp ax,@@ax; код символа слишком большой
+	jg @@m; повторяем попытку ввода 
 	clc
-@@ex:	mov sp,bp
+@@ex:	mov sp,bp; восстанавливаем кадр стека
 	pop bp
 	ret
 	endp
 algorithm	proc
 	locals @@
-@@ibuf	equ [bp+6]
-@@obuf	equ [bp+8]
+@@ibuf	equ [bp+6]; буфер с исходными строками. equ - аналогично сишному define
+@@obuf	equ [bp+8]; буфер, куда надо записать ответ
 	push bp
 	mov bp,sp
 	push ax
@@ -405,30 +405,30 @@ algorithm	proc
 @@m1:	mov di,@@ibuf
 	mov al,10
 	xor bx,bx
-@@m2:	push di
+@@m2:	push di; сохраняем адреса начала строк
 	inc bx
-	repne scasb
-	cmp byte ptr [di-2],13
+	repne scasb; ищем конец строки - 10
+	cmp byte ptr [di-2],13; указатель указывает на начало следующей строки.
 	jne @@er
-	cmp byte ptr [di-1],10
+	cmp byte ptr [di-1],10; если последняя строка оборвана, мы тоже можем обнулиться ==> надо проверить корректное завершение строки
 	jne @@er
-	jcxz @@m3
+	jcxz @@m3; могли достигнуть конца буфера
 	jmp @@m2
-@@m3:	mov cx,bx
-	mov di,@@obuf
-@@m4:	pop si
-@@m5:	lodsb
-	stosb
-	cmp al,10
+@@m3:	mov cx,bx; загрузили количество строк для внешнего цикла
+	mov di,@@obuf; настраиваем на начало выходного буфера
+@@m4:	pop si; адрес очередной строки
+@@m5:	lodsb; считываем символ
+	stosb; записали символ
+	cmp al,10; если очередной символ - 10, извлекаем очередную строку - очередная итерация внешнего цикла
 	jne @@m5
-	loop @@m4
-	xor al,al
+	loop @@m4; посчитали очередную строку
+	xor al,al; закрываем результирующие данные
 	stosb
-	clc
+	clc; очищаем флаг переноса
 	jmp short @@ex
-@@er:	shl bx,1
-	add sp,bx
-	stc
+@@er:	shl bx,1; надо восстановить стек, раз произошла ошибка. В bx хранится число строк, которые мы уже записали.
+	add sp,bx; восстанавливаем состояние стека до начала работы со строками
+	stc; устанавливаем флаг ошибки
 @@ex:	pop di
 	pop si
 	pop cx

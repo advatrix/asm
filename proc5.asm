@@ -1,4 +1,3 @@
-Файл proc.asm
 	.model medium
 public	inputline,input,readfile,output,writefile,menu,algorithm
 extrn	start:far; объявляем точку входа как внешнюю метку
@@ -260,11 +259,11 @@ algorithm	proc
 	neg cx
 	dec cx
 	dec cx; cx = len(ibuf)
-	jcxz @@ex
+	jcxz @@exit
 	cmp cx,4095
 	jbe @@m1; cx > 4095 ==> error
 	stc
-	jmp short @@ex; ошибка
+	jmp short @@exit; ошибка
 	mov di, @@ibuf
 	mov si, @@obuf
 	mov bx, si

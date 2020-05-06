@@ -16,5 +16,5 @@ frm	db 'Incorrect format',13,10,0
 qws	db 'Input file name',13,10,0
 inp	db 'Input text. To end input blank line',13,10,0
 bye	db 'Good bye!',13,10,0
-delim db ' ,:', 0
+delim db ' ,;',13,10, 0
 	end

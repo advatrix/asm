@@ -240,6 +240,8 @@ menu	proc
 	ret
 	endp
 
+
+
 algorithm	proc
 	locals @@
 @@ibuf	equ [bp+6]; буфер с исходными строками. equ - аналогично сишному define
@@ -252,20 +254,22 @@ algorithm	proc
 	push si
 	push di
 
-	mov cx,0ffffh
-	mov di,@@ibuf
-	xor al,al
+	mov cx, 0ffffh
+	mov di, @@ibuf
+	xor al, al
 	repne scasb; считаем длину буфера с исходными строками
 	neg cx
 	dec cx
 	dec cx; cx = len(ibuf)
 	jcxz @@exit
 	cmp cx,4095
-	jbe @@m1; cx > 4095 ==> error
+	jbe @@m; cx > 4095 ==> error
 	stc
 	jmp short @@exit; ошибка
-	mov di, @@ibuf
-	mov si, @@obuf
+	
+@@m:
+	mov si, @@ibuf
+	mov di, @@obuf
 	mov bx, si
 	add bx, cx; get in bx pointer to the end
 	
@@ -280,7 +284,7 @@ algorithm	proc
 	call reverse
 	inc sp
 	inc sp
-	cmp byte ptr[si], 13
+	cmp byte ptr [si], 13
 	je @@nextline
 	cmp si, bx
 	je @@finish
@@ -297,10 +301,12 @@ algorithm	proc
 	stosb; write 13
 	jmp @@m1
 	
-@@error:	shl bx,1; надо восстановить стек, раз произошла ошибка. В bx хранится число строк, которые мы уже записали.
+@@error:	
+	shl bx,1; надо восстановить стек, раз произошла ошибка. В bx хранится число строк, которые мы уже записали.
 	add sp,bx; восстанавливаем состояние стека до начала работы со строками
 	stc; устанавливаем флаг ошибки
 	jmp short @@exit
+
 @@finish:	
 	xor al, al
 	stosb
@@ -319,14 +325,15 @@ algorithm	proc
 
 reverse proc 
 	locals @@
+	push cx
+	mov cx, ax
+	sub cx, si; cx = len(word)
 	
 	push ax
 	push bx
-	push cx
 	push bp
+	mov bp, sp
 	
-	mov cx, [bp+10]
-	sub cx, si
 	mov bx, cx
 	xor ax, ax
 	
@@ -342,9 +349,9 @@ reverse proc
 	loop @@cycm2
 	
 	pop bp
-	pop cx
 	pop bx
 	pop ax
+	pop cx
 	ret
 	endp
 
@@ -357,8 +364,10 @@ _word proc
 	push cx
 	push di
 	
-	lea di, delim
+	push offset delim
+	pop di
 	push di
+	
 	xor al, al
 	mov cx, 65535
 	repne scasb
@@ -384,25 +393,30 @@ _word proc
 	endp
 	
 
-space proc
+space proc; return in si addr to the first non-space character
 	locals @@
+	; di = addr ibuf
+	; si = addr obuf
 	push ax
 	push cx
 	push di
+	
+	lea di, delim
+	push di; stack: addr delim
 	
 	xor al, al
 	mov cx, 65535
 	repne scasb
 	neg cx
 	dec cx
-	push cx
+	push cx; stack: len(delim), addr(delim)
 	
 @@m1:
-	pop cx
-	pop di
-	push di
-	push cx
-	lodsb
+	pop cx; cx = len(delim)
+	pop di; di = addr(delim), stack is empty
+	push di; stack = addr(delim)
+	push cx; stack = len(delim), addr(delim)
+	lodsb; al = ibuf[si]
 	repne scasb
 	jcxz @@m2
 	jmp @@m1
